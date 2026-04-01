@@ -1,0 +1,15 @@
+[project]
+name = "guanrank"
+version = "0.1.0"
+description = "GuanRank algorithm in Python"
+readme = "README.md"
+authors = [{ name = "d-laub", email = "dlaub@ucsd.edu" }]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "numba>=0.59",
+]
+
+[build-system]
+requires = ["uv_build>=0.10.11,<0.11.0"]
+build-backend = "uv_build"
