@@ -4,7 +4,7 @@ Python implementation of the GuanRank hazard ranking algorithm. Assigns a contin
 
 ## Citation
 
-Huang, S., Cai, N., Pacheco, P. P., Narandes, S., Wang, Y., & Xu, W. (2017). Applications of support vector machine (SVM) learning in cancer genomics. *Cancer Genomics & Proteomics*, 15(1), 41–51. https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005887
+Huang et al. (2017). Complete hazard ranking to analyze right-censored data: An ALS survival study. *PLOS Comp Bio*, 15(1), 41–51. https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005887
 
 ## Installation
 
