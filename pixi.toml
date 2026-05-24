@@ -47,6 +47,7 @@ python = "3.14.*"
 [feature.test.pypi-dependencies]
 pytest = ">=8"
 lifelines = ">=0.27"
+pyrefly = ">=1"
 
 [feature.test.tasks]
 test = "pytest"
