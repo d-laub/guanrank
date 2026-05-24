@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint (prek)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.14
+        with:
+          environments: test
+          cache: true
+      - uses: j178/prek-action@v1
+        with:
+          extra_args: --all-files
+
+  test:
+    name: test (${{ matrix.os }}, ${{ matrix.env }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        env: [py310-test, py311-test, py312-test, py313-test, py314-test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.14
+        with:
+          environments: ${{ matrix.env }}
+          cache: true
+      - name: Run tests
+        run: pixi run -e ${{ matrix.env }} test
