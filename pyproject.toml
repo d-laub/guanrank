@@ -21,3 +21,7 @@ tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_file = "CHANGELOG.md"
 major_version_zero = true
+
+[tool.pyrefly]
+project-includes = ["src"]
+python-interpreter-path = ".pixi/envs/test/bin/python"
