@@ -18,3 +18,11 @@ repos:
   hooks:
   - id: commitizen
     stages: [commit-msg]
+- repo: local
+  hooks:
+  - id: pyrefly
+    name: pyrefly
+    language: system
+    entry: pyrefly check
+    pass_filenames: false
+    files: ^src/.*\.py$
