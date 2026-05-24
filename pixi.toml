@@ -7,6 +7,7 @@ version = "0.1.0"
 
 [environments]
 default = ["py310"]
+test = ["py310", "test"]
 py310 = ["py310"]
 py311 = ["py311"]
 py312 = ["py312"]
@@ -37,3 +38,10 @@ python = "3.13.*"
 
 [feature.py314.dependencies]
 python = "3.14.*"
+
+[feature.test.pypi-dependencies]
+pytest = ">=8"
+lifelines = ">=0.27"
+
+[feature.test.tasks]
+test = "pytest"
