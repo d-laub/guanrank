@@ -22,6 +22,7 @@ jobs:
         with:
           environments: test
           cache: true
+          activate-environment: test
       - uses: j178/prek-action@v1
         with:
           extra_args: --all-files
