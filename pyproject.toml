@@ -14,6 +14,16 @@ dependencies = [
 requires = ["uv_build>=0.10.11,<0.11.0"]
 build-backend = "uv_build"
 
+[tool.ruff.lint]
+extend-select = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests are self-documenting by name; don't require docstrings on every test.
+"tests/**" = ["D1"]
+
 [tool.commitizen]
 name = "cz_conventional_commits"
 version_provider = "pep621"

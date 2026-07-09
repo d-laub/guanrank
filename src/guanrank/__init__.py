@@ -208,6 +208,7 @@ class GuanRank:
     _train_ranks: NDArray[np.float64] | None = None
 
     def __init__(self) -> None:
+        """Create an unfitted estimator; call ``fit`` before ``transform``."""
         self._sr_times = None
         self._sr_vals = None
         self._T_fit = None

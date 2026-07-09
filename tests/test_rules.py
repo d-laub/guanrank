@@ -84,8 +84,7 @@ def test_rule5_reversed_A_event_later_than_B_censored():
 
 
 def test_rule6_both_censored_distinct_times_uses_rho():
-    """Both censored at different times; with a third subject (an event)
-    providing KM curvature so rho is non-trivial.
+    """Both censored at distinct times; a third event subject bends the KM curve.
 
     Dataset: T=[1, 3, 2], E=[0, 0, 1]. Subjects of interest: indices 0 and 1
     (both censored). Index 2 is the event that bends the KM curve.
