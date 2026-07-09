@@ -9,11 +9,15 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from guanrank import _kaplan_meier, _rho, guanrank
+from guanrank import _compute_ranks, _kaplan_meier, _rho
 
 
 def _ranks(T, E):
-    return guanrank(np.asarray(T, dtype=np.float64), np.asarray(E, dtype=np.int8))
+    """Raw (un-normalized) hazard scores, to test the pairwise rules directly."""
+    T = np.asarray(T, dtype=np.float64)
+    E = np.asarray(E, dtype=np.int8)
+    sr_times, sr_vals = _kaplan_meier(T, E)
+    return _compute_ranks(sr_times, sr_vals, T, E, T, E)
 
 
 def test_rule1_both_events_distinct():
