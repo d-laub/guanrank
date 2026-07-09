@@ -77,9 +77,8 @@ jobs:
           pathlib.Path("RELEASE_NOTES.md").write_text(notes)
           PY
 
-      - name: Publish to PyPI (OIDC)
-        uses: pypa/gh-action-pypi-publish@release/v1
-
+      # Create the (deletable) GitHub Release before the irreversible PyPI
+      # upload, so a failure here never burns the version number on PyPI.
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -88,3 +87,6 @@ jobs:
             --title "${{ steps.bump.outputs.tag }}" \
             --notes-file RELEASE_NOTES.md \
             dist/*
+
+      - name: Publish to PyPI (OIDC)
+        uses: pypa/gh-action-pypi-publish@release/v1
