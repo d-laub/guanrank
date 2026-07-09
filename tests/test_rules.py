@@ -9,11 +9,15 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from guanrank import _kaplan_meier, _rho, guanrank
+from guanrank import _compute_ranks, _kaplan_meier, _rho
 
 
 def _ranks(T, E):
-    return guanrank(np.asarray(T, dtype=np.float64), np.asarray(E, dtype=np.int8))
+    """Raw (un-normalized) hazard scores, to test the pairwise rules directly."""
+    T = np.asarray(T, dtype=np.float64)
+    E = np.asarray(E, dtype=np.int8)
+    sr_times, sr_vals = _kaplan_meier(T, E)
+    return _compute_ranks(sr_times, sr_vals, T, E, T, E)
 
 
 def test_rule1_both_events_distinct():
@@ -80,8 +84,7 @@ def test_rule5_reversed_A_event_later_than_B_censored():
 
 
 def test_rule6_both_censored_distinct_times_uses_rho():
-    """Both censored at different times; with a third subject (an event)
-    providing KM curvature so rho is non-trivial.
+    """Both censored at distinct times; a third event subject bends the KM curve.
 
     Dataset: T=[1, 3, 2], E=[0, 0, 1]. Subjects of interest: indices 0 and 1
     (both censored). Index 2 is the event that bends the KM curve.

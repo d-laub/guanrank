@@ -154,81 +154,81 @@ def _to_arrays(
 
 
 def guanrank(T: Sequence[float], E: Sequence[int]) -> NDArray[np.float64]:
-    """Compute GuanRank hazard ranks for a dataset.
+    """Compute normalized GuanRank hazard ranks for a dataset.
 
-    Parameters
-    ----------
-    T : sequence of floats
-        Time-to-event or censoring times.
-    E : sequence of ints
-        Event indicators (1 = event occurred, 0 = censored).
+    Builds the Kaplan-Meier survival curve, scores every ordered pair of
+    subjects with the six GuanRank rules, and sums each subject's pairwise
+    scores into a raw hazard rank. Following Huang et al. (2017), the raw ranks
+    are normalized by dividing by the largest rank in the dataset, so the
+    highest-hazard subject maps to 1.0.
 
-    Returns
-    -------
-    numpy.ndarray of floats
-        Hazard rank for each subject. Higher = higher risk of early event.
+    Args:
+        T: Time-to-event or censoring time for each subject.
+        E: Event indicators, 1 if the event occurred and 0 if censored.
+
+    Returns:
+        Hazard rank for each subject, in the same order as the inputs. Higher
+        means higher risk of an earlier event. Ranks lie in ``(0, 1]``, with the
+        highest-hazard subject at 1.0.
     """
     T_arr, E_arr = _to_arrays(T, E)
     sr_times, sr_vals = _kaplan_meier(T_arr, E_arr)
-    return _compute_ranks(sr_times, sr_vals, T_arr, E_arr, T_arr, E_arr)
+    raw = _compute_ranks(sr_times, sr_vals, T_arr, E_arr, T_arr, E_arr)
+    return raw / raw.max()
 
 
 class GuanRank:
     """Sklearn-style transformer for the GuanRank hazard ranking algorithm.
 
-    Parameters fit on training data; can transform held-out subjects by
-    comparing them against the training cohort using the fitted KM curve.
+    GuanRank (Huang et al., 2017) turns right-censored survival data into a
+    single continuous hazard rank per subject, suitable as a regression target.
+    It builds the Kaplan-Meier survival curve, scores every ordered pair of
+    subjects with six rules that account for censoring, and sums each subject's
+    pairwise scores into a raw rank. Raw ranks are normalized by the largest
+    rank in the training cohort, so the highest-hazard training subject maps to
+    1.0.
 
-    Example
-    -------
-    >>> gr = GuanRank()
-    >>> train_ranks = gr.fit_transform(T_train, E_train)
-    >>> test_ranks = gr.transform(T_test, E_test)
+    Fitting learns the training cohort's Kaplan-Meier curve and normalization
+    constant; held-out subjects are scored against that cohort and divided by
+    the same training maximum. In-sample ranks lie in ``(0, 1]``. Out-of-sample
+    ranks share that scale but may exceed 1.0 when a subject is riskier than
+    every training subject (an earlier event than the whole cohort).
+
+    Example:
+        >>> gr = GuanRank()
+        >>> train_ranks = gr.fit_transform(T_train, E_train)
+        >>> test_ranks = gr.transform(T_test, E_test)
     """
 
     _sr_times: NDArray[np.floating] | None = None
     _sr_vals: NDArray[np.floating] | None = None
     _T_fit: NDArray[np.floating] | None = None
     _E_fit: NDArray[np.integer] | None = None
+    _rank_max: float | None = None
+    _train_ranks: NDArray[np.float64] | None = None
 
     def __init__(self) -> None:
+        """Create an unfitted estimator; call ``fit`` before ``transform``."""
         self._sr_times = None
         self._sr_vals = None
         self._T_fit = None
         self._E_fit = None
+        self._rank_max = None
+        self._train_ranks = None
 
     def fit(self, T: Sequence[float], E: Sequence[int]) -> Self:
-        """Fit KM survival function and store training cohort."""
+        """Fit the Kaplan-Meier curve and normalization constant on training data.
+
+        Args:
+            T: Time-to-event or censoring time for each training subject.
+            E: Event indicators, 1 if the event occurred and 0 if censored.
+
+        Returns:
+            The fitted estimator (``self``).
+        """
         self._T_fit, self._E_fit = _to_arrays(T, E)
         self._sr_times, self._sr_vals = _kaplan_meier(self._T_fit, self._E_fit)
-        return self
-
-    def transform(self, T: Sequence[float], E: Sequence[int]) -> NDArray[np.float64]:
-        """Compute hazard ranks for new subjects against the training cohort."""
-        if self._sr_times is None:
-            raise RuntimeError("Call fit() before transform().")
-        assert self._sr_vals is not None
-        assert self._T_fit is not None
-        assert self._E_fit is not None
-
-        T_arr, E_arr = _to_arrays(T, E)
-        ranks = _compute_ranks(
-            self._sr_times, self._sr_vals, self._T_fit, self._E_fit, T_arr, E_arr
-        )
-        return ranks
-
-    def fit_transform(
-        self, T: Sequence[float], E: Sequence[int]
-    ) -> NDArray[np.float64]:
-        """Fit on T/E and return hazard ranks for the same data."""
-        self.fit(T, E)
-
-        assert self._sr_times is not None
-        assert self._sr_vals is not None
-        assert self._T_fit is not None
-        assert self._E_fit is not None
-
-        ranks = _compute_ranks(
+        self._train_ranks = _compute_ranks(
             self._sr_times,
             self._sr_vals,
             self._T_fit,
@@ -236,4 +236,52 @@ class GuanRank:
             self._T_fit,
             self._E_fit,
         )
-        return ranks
+        self._rank_max = float(self._train_ranks.max())
+        return self
+
+    def transform(self, T: Sequence[float], E: Sequence[int]) -> NDArray[np.float64]:
+        """Score new subjects against the fitted training cohort.
+
+        Args:
+            T: Time-to-event or censoring time for each subject to score.
+            E: Event indicators, 1 if the event occurred and 0 if censored.
+
+        Returns:
+            Normalized hazard rank for each subject, in input order, divided by
+            the training cohort's maximum rank. Values lie in ``(0, 1]`` for
+            subjects no riskier than the training cohort and may exceed 1.0 for
+            subjects riskier than every training subject.
+
+        Raises:
+            RuntimeError: If called before ``fit``.
+        """
+        if self._sr_times is None:
+            raise RuntimeError("Call fit() before transform().")
+        assert self._sr_vals is not None
+        assert self._T_fit is not None
+        assert self._E_fit is not None
+        assert self._rank_max is not None
+
+        T_arr, E_arr = _to_arrays(T, E)
+        raw = _compute_ranks(
+            self._sr_times, self._sr_vals, self._T_fit, self._E_fit, T_arr, E_arr
+        )
+        return raw / self._rank_max
+
+    def fit_transform(
+        self, T: Sequence[float], E: Sequence[int]
+    ) -> NDArray[np.float64]:
+        """Fit on ``T``/``E`` and return the training subjects' normalized ranks.
+
+        Args:
+            T: Time-to-event or censoring time for each subject.
+            E: Event indicators, 1 if the event occurred and 0 if censored.
+
+        Returns:
+            Normalized hazard rank for each subject, in input order. Ranks lie
+            in ``(0, 1]``, with the highest-hazard subject at 1.0.
+        """
+        self.fit(T, E)
+        assert self._train_ranks is not None
+        assert self._rank_max is not None
+        return self._train_ranks / self._rank_max
